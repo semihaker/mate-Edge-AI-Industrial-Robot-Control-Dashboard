@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MATE Endustriyel Robot Kontrol Sistemi">
+    <title>MATE Kontrol Sistemi</title>
+    <style>
+        :root {
+            --bg-0: #080a0f;
+            --bg-1: #0e1117;
+            --bg-2: #151921;
+            --bg-3: #1c212d;
+            --bg-term: #0a0c11;
+
+            --brd-1: rgba(255,255,255,0.04);
+            --brd-2: rgba(255,255,255,0.07);
+            --brd-focus: rgba(96,165,250,0.5);
+
+            --c-blue:   #5b9bd5;
+            --c-green:  #6bc785;
+            --c-amber:  #d4a843;
+            --c-red:    #d15b5b;
+            --c-cyan:   #4db8c7;
+            --c-purple: #9b7ec8;
+            --c-orange: #c7854d;
+
+            --t-1: #c8cdd6;
+            --t-2: #7f8a9b;
+            --t-3: #505a6b;
+
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --mono: 'Cascadia Mono', 'Consolas', 'Courier New', monospace;
+
+            --r: 6px;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        html { font-size: 14px; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-0);
+            color: var(--t-1);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* ======== LAYOUT ======== */
+
+        .shell {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 12px 14px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            align-items: start;
+        }
+
+        /* ======== HEADER ======== */
+
+        .hdr {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--brd-1);
+        }
+
+        .hdr-ico {
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg-2);
+            border: 1px solid var(--brd-2);
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .hdr-ico svg { width: 16px; height: 16px; fill: var(--c-blue); }
+
+        .hdr h1 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--t-1);
+        }
+
+        .hdr-tag {
+            font-size: 0.6rem;
+            font-family: var(--mono);
+            color: var(--t-3);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-left: auto;
+        }
+
+        /* ======== PANEL ======== */
+
+        .pnl {
+            background: var(--bg-1);
+            border: 1px solid var(--brd-1);
+            border-radius: var(--r);
+            overflow: hidden;
+        }
+
+        .pnl-h {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--brd-1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-2);
+        }
+
+        .pnl-t {
+            font-size: 0.65rem;
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--t-2);
+            font-weight: 600;
+        }
+
+        .pnl-b { padding: 12px; }
+
+        /* ======== KAMERA (MJPEG -> Canvas) ======== */
+
+        .col-l, .col-r { display: flex; flex-direction: column; gap: 10px; }
+
+        .cam-box {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background: #000;
+            border-radius: 0 0 var(--r) var(--r);
+            overflow: hidden;
+        }
+
+        .cam-box canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* sinyal yok yer tutucu */
+        .cam-none {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: var(--t-3);
+            font-family: var(--mono);
+            font-size: 0.75rem;
+        }
+
+        .cam-none svg { width: 28px; height: 28px; fill: var(--t-3); opacity: 0.3; }
+
+        /* ALGILAMA MODULU */
+
+        .det-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--brd-1);
+        }
+
+        .det-cell {
+            background: var(--bg-1);
+            padding: 8px 6px;
+            text-align: center;
+        }
+
+        .det-lbl {
+            font-size: 0.58rem;
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--t-3);
+            margin-bottom: 2px;
+        }
+
+        .det-val {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .det-val.v-gest { color: var(--c-cyan); }
+        .det-val.v-cmd  { color: var(--c-blue); }
+        .det-val.v-emo  { color: var(--c-purple); }
+        .det-val.v-fps  { color: var(--c-green); }
+
+        /* ======== SES CIKIS SEVIYESI ======== */
+
+        .vol-row { display: flex; align-items: center; gap: 10px; }
+        .vol-ico { flex-shrink:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center; }
+        .vol-ico svg { width:16px; height:16px; fill:var(--t-2); }
+        .vol-wrap { flex:1; }
+
+        input[type="range"] {
+            -webkit-appearance:none; appearance:none;
+            width:100%; height:3px; border-radius:1px;
+            background:var(--bg-3); outline:none; cursor:pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+            background:var(--c-blue); border:2px solid var(--bg-0); cursor:grab;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width:14px; height:14px; border-radius:50%;
+            background:var(--c-blue); border:2px solid var(--bg-0); cursor:grab;
+        }
+
+        .vol-num {
+            font-family:var(--mono); font-size:0.75rem;
+            color:var(--t-2); min-width:32px; text-align:right;
+        }
+
+        /* ======== SES GIRIS MODULU ======== */
+
+        .mic-area { text-align: center; }
+
+        .mic-col { display:flex; flex-direction:column; align-items:center; gap:10px; padding:6px 0; }
+
+        .mic-btn {
+            width: 64px; height: 64px; border-radius: 50%;
+            border: 2px solid var(--brd-2);
+            background: var(--bg-2);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            outline: none;
+            transition: all 0.2s var(--ease);
+        }
+
+        .mic-btn svg { width:22px; height:22px; fill:var(--t-2); transition:fill 0.2s var(--ease); }
+        .mic-btn:hover { border-color:var(--c-blue); }
+        .mic-btn:hover svg { fill:var(--c-blue); }
+
+        .mic-btn.active {
+            border-color: var(--c-green);
+            background: rgba(107,199,133,0.08);
+            animation: pulse 1.8s ease-in-out infinite;
+        }
+        .mic-btn.active svg { fill: var(--c-green); }
+
+        @keyframes pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(107,199,133,0.35); }
+            70%  { box-shadow: 0 0 0 12px rgba(107,199,133,0); }
+            100% { box-shadow: 0 0 0 0 rgba(107,199,133,0); }
+        }
+
+        .mic-btn.busy {
+            border-color: var(--c-amber);
+            background: rgba(212,168,67,0.08);
+            cursor: wait;
+        }
+        .mic-btn.busy svg { fill: var(--c-amber); animation: spin 1s linear infinite; }
+
+        @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
+        .mic-lbl {
+            font-size: 0.68rem;
+            font-family: var(--mono);
+            color: var(--t-3);
+        }
+        .mic-lbl.on   { color: var(--c-green); }
+        .mic-lbl.wait { color: var(--c-amber); }
+
+        /* METIN GIRIS (fallback / manuel) */
+
+        .txt-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .txt-in {
+            flex: 1;
+            padding: 6px 10px;
+            background: var(--bg-term);
+            border: 1px solid var(--brd-2);
+            border-radius: 4px;
+            color: var(--t-1);
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            outline: none;
+        }
+
+        .txt-in:focus { border-color: var(--c-blue); }
+        .txt-in::placeholder { color: var(--t-3); }
+
+        .txt-btn {
+            padding: 6px 12px;
+            background: var(--bg-3);
+            border: 1px solid var(--brd-2);
+            border-radius: 4px;
+            color: var(--t-2);
+            font-family: var(--mono);
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            transition: background 0.2s var(--ease);
+        }
+
+        .txt-btn:hover { background: rgba(91,155,213,0.12); color: var(--c-blue); }
+
+        /* ======== ILETISIM GUNLUGU ======== */
+
+        .log-box {
+            background: var(--bg-term);
+            padding: 10px;
+            max-height: 240px;
+            overflow-y: auto;
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            line-height: 1.65;
+        }
+
+        .log-box::-webkit-scrollbar { width:3px; }
+        .log-box::-webkit-scrollbar-track { background:transparent; }
+        .log-box::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.06); border-radius:1px; }
+
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+            word-break: break-word;
+        }
+        .log-entry:last-child { border-bottom:none; }
+
+        .log-entry .pfx { font-weight:700; margin-right:5px; }
+        .log-entry.op .pfx  { color:var(--c-green); }
+        .log-entry.sys .pfx { color:var(--c-blue); }
+        .log-entry.inf { color:var(--t-3); font-style:italic; font-size:0.68rem; }
+        .log-entry.err { color:var(--c-red); }
+
+        .log-empty { color:var(--t-3); text-align:center; padding:24px 0; font-size:0.72rem; }
+
+        .rst-btn {
+            background:none;
+            border:1px solid rgba(209,91,91,0.15);
+            color:var(--c-red);
+            font-size:0.6rem;
+            font-family:var(--mono);
+            padding:2px 7px;
+            border-radius:3px;
+            cursor:pointer;
+            text-transform:uppercase;
+            letter-spacing:0.04em;
+        }
+        .rst-btn:hover { background:rgba(209,91,91,0.08); }
+
+        /* ======== DURUM SATIRI ======== */
+
+        .stat {
+            display:flex; align-items:center; gap:7px; padding:6px 12px;
+            background:var(--bg-1); border:1px solid var(--brd-1); border-radius:4px;
+            font-family:var(--mono); font-size:0.62rem; color:var(--t-3);
+        }
+
+        .dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+        .dot.ok   { background:var(--c-green); }
+        .dot.busy { background:var(--c-amber); animation:blink .8s ease-in-out infinite; }
+        .dot.fail { background:var(--c-red); }
+
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+        /* ======== RESPONSIVE ======== */
+
+        @media (max-width:740px) {
+            .grid { grid-template-columns:1fr; }
+            .det-grid { grid-template-columns:repeat(2,1fr); }
+            .mic-btn { width:56px; height:56px; }
+            .mic-btn svg { width:18px; height:18px; }
+            .log-box { max-height:180px; }
+        }
+
+        *:focus-visible { outline:2px solid var(--c-blue); outline-offset:2px; }
+        ::selection { background:rgba(91,155,213,0.2); color:#fff; }
+    </style>
+</head>
+<body>
+
+<div class="shell">
+
+    <!-- HEADER -->
+    <header class="hdr">
+        <div class="hdr-ico">
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94a7 7 0 00.13-1.12c0-.31-.04-.63-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84a.48.48 0 00-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.48.48 0 00.12.61l2.03 1.58c-.05.37-.09.69-.09 1.06s.02.63.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.37 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12.03 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/></svg>
+        </div>
+        <h1>MATE Kontrol Sistemi</h1>
+        <span class="hdr-tag">v4.0 // edge-proc</span>
+    </header>
+
+    <!-- GRID -->
+    <div class="grid">
+
+        <!-- SOL: GORUNTU AKISI + ALGILAMA -->
+        <div class="col-l">
+
+            <div class="pnl">
+                <div class="pnl-h">
+                    <span class="pnl-t">Goruntu Akisi</span>
+                    <span class="pnl-t" id="camStat" style="color:var(--t-3)">Baglanti Bekleniyor</span>
+                </div>
+                <div class="cam-box" id="camBox">
+                    <!-- Gizli MJPEG kaynagi -->
+                    <img id="mjpeg" src="/video_feed" style="display:none" alt="">
+                    <canvas id="cvs"></canvas>
+                    <div class="cam-none" id="camNone">
+                        <svg viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V4h-4z"/></svg>
+                        <span>Sinyal Bekleniyor</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALGILAMA MODULU -->
+            <div class="pnl">
+                <div class="det-grid">
+                    <div class="det-cell">
+                        <div class="det-lbl">Hareket Sinifi</div>
+                        <div class="det-val v-gest" id="dGest">---</div>
+                    </div>
+                    <div class="det-cell">
+                        <div class="det-lbl">Komut Kodu</div>
+                        <div class="det-val v-cmd" id="dCmd">BEKLE</div>
+                    </div>
+                    <div class="det-cell">
+                        <div class="det-lbl">Ifade Durumu</div>
+                        <div class="det-val v-emo" id="dEmo">Notr</div>
+                    </div>
+                    <div class="det-cell">
+                        <div class="det-lbl">Kare/sn</div>
+                        <div class="det-val v-fps" id="dFps">0</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SAG: KONTROLLER -->
+        <div class="col-r">
+
+            <!-- SES CIKIS -->
+            <div class="pnl">
+                <div class="pnl-h"><span class="pnl-t">Ses Cikis Seviyesi</span></div>
+                <div class="pnl-b">
+                    <div class="vol-row">
+                        <div class="vol-ico" id="vIco">
+                            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8.5v7a4.47 4.47 0 002.5-3.5zM14 3.23v2.06a6.51 6.51 0 010 13.42v2.06A8.49 8.49 0 0014 3.23z"/></svg>
+                        </div>
+                        <div class="vol-wrap">
+                            <input type="range" id="vSlider" min="0" max="100" value="50" aria-label="Ses cikis seviyesi">
+                        </div>
+                        <span class="vol-num" id="vNum">50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SES GIRIS -->
+            <div class="pnl mic-area">
+                <div class="pnl-h"><span class="pnl-t">Ses Giris Modulu</span></div>
+                <div class="pnl-b">
+                    <div class="mic-col">
+                        <button class="mic-btn" id="micBtn" type="button" aria-label="Ses girisi baslat">
+                            <svg id="micIco" viewBox="0 0 24 24">
+                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                            </svg>
+                            <svg id="busyIco" viewBox="0 0 24 24" style="display:none">
+                                <path d="M12 4V2A10 10 0 002 12h2a8 8 0 018-8z"/>
+                            </svg>
+                        </button>
+                        <span class="mic-lbl" id="micLbl">Ses Girisi Baslat</span>
+                    </div>
+                    <div class="txt-row">
+                        <input class="txt-in" type="text" id="txtIn" placeholder="Metin komutu girin..." aria-label="Metin girisi">
+                        <button class="txt-btn" id="txtBtn" type="button">Gonder</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ILETISIM GUNLUGU -->
+            <div class="pnl">
+                <div class="pnl-h">
+                    <span class="pnl-t">Iletisim Gunlugu</span>
+                    <button class="rst-btn" id="rstBtn" type="button">Sifirla</button>
+                </div>
+                <div class="log-box" id="logBox">
+                    <div class="log-empty" id="logEmpty">Kayit bulunmuyor.</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- DURUM SATIRI -->
+    <footer class="stat">
+        <span class="dot ok" id="sDot"></span>
+        <span id="sTxt">Sistem baslatiliyor...</span>
+    </footer>
+
+</div>
+
+<!-- ================================================================
+     JAVASCRIPT
+     - Goruntu isleme: MJPEG <img> -> Canvas -> MediaPipe JS (WASM)
+     - Ses giris: webkitSpeechRecognition (tarayici STT)
+     - Manuel giris: Metin POST
+     - Tum AI isleme tarayicida; Pi'ye yalnizca metin + komut gider
+     ================================================================ -->
+<script type="module">
+
+// ===== SABITLER =====
+
+var KOMUT = {
+    Closed_Fist: { k:"ILERI",      t:"Yumruk" },
+    Open_Palm:   { k:"DUR",        t:"Acik El" },
+    Pointing_Up: { k:"YUKARI_BAK", t:"Yukari Isaret" },
+    Thumb_Up:    { k:"ONAYLA",     t:"Onay" },
+    Thumb_Down:  { k:"IPTAL",      t:"Ret" },
+    Victory:     { k:"SELAMLA",    t:"V-Isareti" },
+    ILoveYou:    { k:"OZEL_MOD",   t:"Ozel" },
+    None:        { k:"BEKLE",      t:"---" }
+};
+
+var HAND_CONNS = [
+    [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+    [0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],
+    [0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]
+];
+
+
+// ===== DUYGU ANALIZI =====
+
+function tahminiDuygu(bs) {
+    function g(n) {
+        var x = bs.find(function(b){ return b.categoryName === n; });
+        return x ? x.score : 0;
+    }
+    var smile = (g("mouthSmileLeft") + g("mouthSmileRight")) / 2;
+    var frown = (g("mouthFrownLeft") + g("mouthFrownRight")) / 2;
+    var bDown = (g("browDownLeft") + g("browDownRight")) / 2;
+    var bUp = g("browInnerUp");
+    var eWide = (g("eyeWideLeft") + g("eyeWideRight")) / 2;
+    var jaw = g("jawOpen");
+    var sneer = (g("noseSneerLeft") + g("noseSneerRight")) / 2;
+    var cheek = (g("cheekSquintLeft") + g("cheekSquintRight")) / 2;
+
+    var s = {
+        Mutlu:    smile*1.5 + cheek*0.5,
+        Uzgun:    frown*1.2 + bUp*0.8,
+        Kizgin:   bDown*1.2 + sneer*0.5,
+        Saskin:   eWide*0.8 + jaw*0.7 + bUp*0.5,
+        Korkmus:  eWide*1.0 + bUp*0.8,
+        Igrenmis: sneer*2.0
+    };
+
+    var en = "Notr", ev = 0.15;
+    for (var k in s) { if (s[k] > ev) { en = k; ev = s[k]; } }
+    return { d: en, c: ev };
+}
+
+
+// ===== DOM =====
+
+var mjpeg   = document.getElementById("mjpeg");
+var cvs     = document.getElementById("cvs");
+var camNone = document.getElementById("camNone");
+var camStat = document.getElementById("camStat");
+var ctx     = cvs.getContext("2d");
+
+var dGest = document.getElementById("dGest");
+var dCmd  = document.getElementById("dCmd");
+var dEmo  = document.getElementById("dEmo");
+var dFps  = document.getElementById("dFps");
+
+var vSlider = document.getElementById("vSlider");
+var vNum    = document.getElementById("vNum");
+var vIco    = document.getElementById("vIco");
+
+var micBtn  = document.getElementById("micBtn");
+var micIco  = document.getElementById("micIco");
+var busyIco = document.getElementById("busyIco");
+var micLbl  = document.getElementById("micLbl");
+var txtIn   = document.getElementById("txtIn");
+var txtBtn  = document.getElementById("txtBtn");
+
+var logBox  = document.getElementById("logBox");
+var logEmpty = document.getElementById("logEmpty");
+var rstBtn  = document.getElementById("rstBtn");
+var sDot    = document.getElementById("sDot");
+var sTxt    = document.getElementById("sTxt");
+
+
+// ===== DURUM =====
+
+var gestureRec = null;
+var faceLM     = null;
+var mpOK       = false;
+var camReady   = false;
+var fpsArr     = [];
+var fCnt       = 0;
+var lastCmd    = null;
+var curGest    = "---";
+var curCmd     = "BEKLE";
+var curEmo     = "Notr";
+var hasLog     = false;
+var volT       = null;
+var isListening = false;
+var isBusy      = false;
+var recognition = null;
+
+
+// ===== DURUM FONKSIYONLARI =====
+
+function setStat(s, m) {
+    sTxt.textContent = m;
+    sDot.className = "dot " + s;
+}
+
+
+// ===== MEDIAPIPE JS (opsiyonel) =====
+
+try {
+    var mp = await import("/static/mediapipe/vision_bundle.mjs");
+    setStat("busy", "Modeller yukleniyor...");
+
+    var vision = await mp.FilesetResolver.forVisionTasks("/static/mediapipe/wasm");
+
+    try {
+        gestureRec = await mp.GestureRecognizer.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: "/models/gesture_recognizer.task" },
+            runningMode: "VIDEO", numHands: 1,
+            minHandDetectionConfidence: 0.4, minTrackingConfidence: 0.4
+        });
+    } catch (e) { console.warn("[SYS] El modeli yuklenemedi:", e); }
+
+    try {
+        faceLM = await mp.FaceLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: "/models/face_landmarker.task" },
+            runningMode: "VIDEO", outputFaceBlendshapes: true, numFaces: 1,
+            minFaceDetectionConfidence: 0.5, minTrackingConfidence: 0.5
+        });
+    } catch (e) { console.warn("[SYS] Yuz modeli yuklenemedi:", e); }
+
+    mpOK = !!(gestureRec || faceLM);
+    setStat("ok", mpOK ? "Durum: Hazir" : "Modeller yuklenemedi");
+
+} catch (e) {
+    console.warn("[SYS] MediaPipe JS bulunamadi:", e);
+    setStat("ok", "Durum: Hazir (algilama devre disi)");
+}
+
+
+// ===== MJPEG -> CANVAS ISLEME =====
+
+function mjpegKontrol() {
+    if (!camReady && mjpeg.naturalWidth > 0) {
+        cvs.width  = mjpeg.naturalWidth;
+        cvs.height = mjpeg.naturalHeight;
+        camNone.style.display = "none";
+        cvs.style.display = "block";
+        camStat.textContent = "Aktif";
+        camStat.style.color = "var(--c-green)";
+        camReady = true;
+        requestAnimationFrame(kareDongusu);
+    } else if (!camReady) {
+        setTimeout(mjpegKontrol, 100);
+    }
+}
+// Kontrolu baslat
+mjpegKontrol();
+
+mjpeg.addEventListener("error", function() {
+    camStat.textContent = "Sinyal Yok";
+    camStat.style.color = "var(--c-red)";
+    camReady = false;
+    camNone.style.display = "";
+    cvs.style.display = "none";
+    // Yeniden dene
+    setTimeout(function() { 
+        mjpeg.src = "/video_feed?" + Date.now(); 
+        mjpegKontrol(); // Tekrar kontrole basla
+    }, 3000);
+});
+
+
+function kareDongusu() {
+    if (!camReady) return;
+
+    var w = cvs.width, h = cvs.height;
+    fCnt++;
+
+    // FPS
+    var now = performance.now();
+    fpsArr.push(now);
+    while (fpsArr.length > 0 && now - fpsArr[0] > 1000) fpsArr.shift();
+    var fps = fpsArr.length;
+
+    // Ham kareyi canvas'a ciz
+    ctx.drawImage(mjpeg, 0, 0, w, h);
+
+    var ts = now;
+
+    // --- El Hareket Algilama ---
+    if (gestureRec) {
+        try {
+            var gr = gestureRec.recognizeForVideo(cvs, ts);
+            if (gr.landmarks && gr.landmarks.length > 0) {
+                for (var i = 0; i < gr.landmarks.length; i++) {
+                    var cl = gr.handedness && i < gr.handedness.length
+                        ? (gr.handedness[i][0].categoryName === "Left" ? "#d4a843" : "#4db8c7")
+                        : "#4db8c7";
+                    cizEl(gr.landmarks[i], w, h, cl);
+                    if (gr.gestures && i < gr.gestures.length) {
+                        var rg = gr.gestures[i][0].categoryName;
+                        var nfo = KOMUT[rg] || KOMUT.None;
+                        curGest = nfo.t;
+                        curCmd  = nfo.k;
+                    }
+                }
+            } else {
+                curGest = "---";
+                curCmd  = "BEKLE";
+            }
+        } catch (e) {}
+    }
+
+    // --- Yuz Algilama (her 4 karede) ---
+    if (faceLM && fCnt % 4 === 0) {
+        try {
+            var fr = faceLM.detectForVideo(cvs, ts + 1);
+            if (fr.faceLandmarks && fr.faceLandmarks.length > 0) {
+                var n = fr.faceLandmarks[0][1];
+                var nx = n.x * w, ny = n.y * h;
+                var cx = w / 2, cy = h / 2;
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny);
+                ctx.strokeStyle = "#4db8c7"; ctx.lineWidth = 1; ctx.stroke();
+                ctx.beginPath(); ctx.arc(nx, ny, 4, 0, Math.PI * 2);
+                ctx.fillStyle = "#d15b5b"; ctx.fill();
+            }
+            if (fr.faceBlendshapes && fr.faceBlendshapes.length > 0) {
+                var e = tahminiDuygu(fr.faceBlendshapes[0]);
+                curEmo = e.d;
+            }
+        } catch (e) {}
+    }
+
+    // --- Overlay Cizimi ---
+    ctx.font = "12px monospace";
+    ctx.fillStyle = "#7f8a9b";
+    ctx.fillText("FPS: " + fps, 8, 16);
+
+    var eClr = {Mutlu:"#6bc785",Uzgun:"#d4a843",Kizgin:"#d15b5b",Saskin:"#d4d443",Korkmus:"#9b7ec8",Igrenmis:"#7e8e5e",Notr:"#7f8a9b"};
+    ctx.font = "bold 12px monospace";
+    ctx.fillStyle = eClr[curEmo] || "#7f8a9b";
+    ctx.fillText("IFADE: " + curEmo, 8, 34);
+
+    var ct = "KOMUT: " + curCmd;
+    ctx.font = "bold 14px monospace";
+    var cw = ctx.measureText(ct).width;
+    var cx2 = (w - cw) / 2;
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(cx2 - 6, h - 36, cw + 12, 24);
+    ctx.fillStyle = "#4db8c7";
+    ctx.fillText(ct, cx2, h - 18);
+
+    if (curGest !== "---") {
+        var gt = "Hareket: " + curGest;
+        ctx.font = "11px monospace";
+        ctx.fillStyle = "#7f8a9b";
+        var gw2 = ctx.measureText(gt).width;
+        ctx.fillText(gt, (w - gw2) / 2, h - 44);
+    }
+
+    // Panel guncelle
+    dGest.textContent = curGest;
+    dCmd.textContent  = curCmd;
+    dEmo.textContent  = curEmo;
+    dFps.textContent  = fps;
+
+    // Komut degistiyse Pi'ye bildir
+    if (curCmd !== lastCmd) {
+        lastCmd = curCmd;
+        fetch("/send_command", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ command: curCmd, gesture: curGest, emotion: curEmo })
+        }).catch(function() {});
+    }
+
+    requestAnimationFrame(kareDongusu);
+}
+
+
+// ===== EL ISKELETI CIZIMI =====
+
+function cizEl(lm, w, h, renk) {
+    ctx.strokeStyle = renk;
+    ctx.lineWidth = 2;
+    for (var i = 0; i < HAND_CONNS.length; i++) {
+        var a = HAND_CONNS[i][0], b = HAND_CONNS[i][1];
+        if (a < lm.length && b < lm.length) {
+            ctx.beginPath();
+            ctx.moveTo(lm[a].x * w, lm[a].y * h);
+            ctx.lineTo(lm[b].x * w, lm[b].y * h);
+            ctx.stroke();
+        }
+    }
+    for (var j = 0; j < lm.length; j++) {
+        var r = (j===4||j===8||j===12||j===16||j===20) ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(lm[j].x * w, lm[j].y * h, r, 0, Math.PI * 2);
+        ctx.fillStyle = "#c8cdd6";
+        ctx.fill();
+    }
+}
+
+
+// ===== SES CIKIS SEVIYESI =====
+
+var VOL_SVG = {
+    mute:'<svg viewBox="0 0 24 24"><path d="M16.5 12A4.5 4.5 0 0014 8.5v2.09l2.5 2.5V12zM19 12c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.46 8.46 0 0021 12a8.49 8.49 0 00-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.57 8.57 0 003.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>',
+    low:'<svg viewBox="0 0 24 24"><path d="M7 9v6h4l5 5V4l-5 5H7z"/></svg>',
+    mid:'<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8.5v7a4.47 4.47 0 002.5-3.5z"/></svg>',
+    high:'<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8.5v7a4.47 4.47 0 002.5-3.5zM14 3.23v2.06a6.51 6.51 0 010 13.42v2.06A8.49 8.49 0 0014 3.23z"/></svg>'
+};
+
+vSlider.addEventListener("input", function() {
+    var v = parseInt(this.value, 10);
+    vNum.textContent = v + "%";
+    var key = v === 0 ? "mute" : v < 33 ? "low" : v < 66 ? "mid" : "high";
+    vIco.innerHTML = VOL_SVG[key];
+    vIco.querySelector("svg").style.cssText = "width:16px;height:16px;fill:var(--t-2)";
+    clearTimeout(volT);
+    volT = setTimeout(function() {
+        fetch("/set_volume", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ volume: v })
+        }).catch(function() {});
+    }, 200);
+});
+
+
+// ===== SES GIRIS — webkitSpeechRecognition =====
+
+var SpeechAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechAPI) {
+    recognition = new SpeechAPI();
+    recognition.lang = "tr-TR";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = function(ev) {
+        var t = "";
+        var isFinal = false;
+        for (var i = ev.resultIndex; i < ev.results.length; i++) {
+            t += ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) isFinal = true;
+        }
+        if (isFinal) {
+            durSesleDinleme();
+            gonderMetin(t.trim());
+        } else {
+            micLbl.textContent = t;
+        }
+    };
+
+    recognition.onerror = function(ev) {
+        if (ev.error === "no-speech") {
+            micLbl.textContent = "Ses algilanamadi";
+        } else if (ev.error === "not-allowed") {
+            micLbl.textContent = "Mikrofon izni reddedildi";
+        } else {
+            micLbl.textContent = "Hata: " + ev.error;
+        }
+        durSesleDinleme();
+    };
+
+    recognition.onend = function() {
+        if (isListening) durSesleDinleme();
+    };
+} else {
+    // SpeechRecognition desteklenmiyor
+    micLbl.textContent = "Ses girisi desteklenmiyor";
+    micBtn.style.opacity = "0.4";
+    micBtn.style.cursor = "not-allowed";
+}
+
+
+micBtn.addEventListener("click", function() {
+    if (!recognition || isBusy) return;
+    if (isListening) {
+        recognition.stop();
+        durSesleDinleme();
+    } else {
+        baslatSesleDinleme();
+    }
+});
+
+function baslatSesleDinleme() {
+    try {
+        recognition.start();
+        isListening = true;
+        micBtn.className = "mic-btn active";
+        micLbl.textContent = "Ses Verisi Aliniyor...";
+        micLbl.className = "mic-lbl on";
+        setStat("busy", "Ses girisi aktif");
+    } catch (e) {
+        micLbl.textContent = "Baslatilamadi: " + e.message;
+    }
+}
+
+function durSesleDinleme() {
+    isListening = false;
+    micBtn.className = "mic-btn";
+    micLbl.textContent = "Ses Girisi Baslat";
+    micLbl.className = "mic-lbl";
+}
+
+
+// ===== METIN GONDER (ortak fonksiyon) =====
+
+function gonderMetin(metin) {
+    if (!metin || isBusy) return;
+    isBusy = true;
+    micBtn.className = "mic-btn busy";
+    micIco.style.display = "none";
+    busyIco.style.display = "block";
+    micLbl.textContent = "Sistem Isleniyor...";
+    micLbl.className = "mic-lbl wait";
+    setStat("busy", "Yanit bekleniyor...");
+
+    fetch("/process_text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: metin })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.success) {
+            logYaz("op", d.user_text);
+            logYaz("sys", d.ai_text);
+            setStat("ok", "Durum: Hazir");
+        } else {
+            logYaz("err", d.error || "Bilinmeyen hata");
+            setStat("fail", d.error || "Hata");
+        }
+    })
+    .catch(function(e) {
+        logYaz("err", "Sunucu erisim hatasi: " + e.message);
+        setStat("fail", "Baglanti hatasi");
+    })
+    .finally(function() {
+        isBusy = false;
+        micBtn.className = "mic-btn";
+        busyIco.style.display = "none";
+        micIco.style.display = "block";
+        micLbl.textContent = "Ses Girisi Baslat";
+        micLbl.className = "mic-lbl";
+    });
+}
+
+
+// ===== METIN GIRISI (Manuel Fallback) =====
+
+txtBtn.addEventListener("click", function() {
+    var t = txtIn.value.trim();
+    if (t) { txtIn.value = ""; gonderMetin(t); }
+});
+
+txtIn.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        var t = txtIn.value.trim();
+        if (t) { txtIn.value = ""; gonderMetin(t); }
+    }
+});
+
+
+// ===== ILETISIM GUNLUGU =====
+
+function esc(s) {
+    var d = document.createElement("span");
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function logYaz(tip, metin) {
+    if (!hasLog) { if (logEmpty) logEmpty.remove(); hasLog = true; }
+    var el = document.createElement("div");
+    el.className = "log-entry " + tip;
+    if (tip === "op")       el.innerHTML = '<span class="pfx">OPERATOR:</span>' + esc(metin);
+    else if (tip === "sys") el.innerHTML = '<span class="pfx">SISTEM:</span>' + esc(metin);
+    else if (tip === "err") el.textContent = "[HATA] " + metin;
+    else                    el.textContent = metin;
+    logBox.appendChild(el);
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+rstBtn.addEventListener("click", function() {
+    logBox.innerHTML = '<div class="log-empty">Gunluk sifirlandi.</div>';
+    hasLog = false;
+    fetch("/clear_history", { method: "POST" }).catch(function() {});
+});
+
+
+// ===== SAYFA YUKLEME =====
+
+fetch("/chat_history")
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.success && d.history && d.history.length > 0) {
+            d.history.forEach(function(x) {
+                logYaz(x.rol === "user" ? "op" : "sys", x.metin);
+            });
+        }
+    }).catch(function() {});
+
+if (!isBusy) setStat("ok", "Durum: Hazir");
+logYaz("inf", "Sistem baslatildi. Goruntu ve ses modulleri aktif.");
+
+</script>
+</body>
+</html>
