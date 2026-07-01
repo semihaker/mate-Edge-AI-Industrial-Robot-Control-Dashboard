@@ -4,14 +4,12 @@ MATE, Raspberry Pi (Pi Zero / Pi 4 vb.) gibi son derece kısıtlı donanıma sah
 
 Sistem, yapay zeka görüş (Computer Vision) ve ses-metin dönüşümü (STT) gibi çok ağır yükleri Raspberry Pi'nin üzerinden alarak tamamen kontrolcü cihazın (PC/Telefon) tarayıcısına yıkar. Bu sayede Pi'nin işlemcisi **%0'a yakın AI yüküyle** çalışır.
 
-## 📸 Ekran Görüntüleri
+## 📸 Ekran Görüntüsü
 
 *Endüstriyel Dashboard ve Donanımsal Kamera Akışı:*
 
-<p align="center">
-  <img src="pictures/pc_gorunum.jpeg" alt="Masaüstü Endüstriyel Panel Görünümü" width="48%">
-  &nbsp;
-  <img src="pictures/mobil_gorunum.jpeg" alt="Mobil Kontrol Paneli Görünümü" width="48%">
+<img width="300" height="400" alt="mobil_gorunum" src="https://github.com/user-attachments/assets/b0f00fb6-a083-484d-9999-f55ca535ad32" />
+
 </p>
 
 ## 🚀 Öne Çıkan Özellikler (Edge Mimari)
